@@ -1,38 +1,72 @@
-package config
+package main
 
 import (
 	"flag"
+	"fmt"
+	"log"
 	"os"
+	"time"
 
 	"github.com/spf13/viper"
+)
+
+const (
+	DefaultConfigPath = "configs"
+	DefaultConfigFile = "config"
 )
 
 type Config struct {
 	Address string
 }
 
-func LoadConfig() *Config {
-	// 1. 从标志读取
+func getAddressFromFlag() string {
 	address := flag.String("address", "", "RPC server address")
 	flag.Parse()
+	return *address
+}
 
-	// 2. 从环境变量读取
-	if *address == "" {
-		*address = os.Getenv("RPC_ADDRESS")
-	}
+func getAddressFromEnv() string {
+	return os.Getenv("RPC_ADDRESS")
+}
 
-	// 3. 从配置文件读取
-	viper.SetConfigName("config")
-	viper.AddConfigPath(".")
+func getAddressFromConfig(configPath string) string {
+	log.Println("DefaultConfigFile is", DefaultConfigFile)
+	log.Println("configPath is", configPath)
+
+	viper.SetConfigName(DefaultConfigFile)
+	viper.AddConfigPath(configPath)
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("Fatal error config file: %s", err))
 	}
-	if *address == "" {
-		*address = viper.GetString("address")
+	return viper.GetString("address")
+}
+
+func LoadConfig(configPath string) *Config {
+	address := getAddressFromFlag()
+	if address == "" {
+		address = getAddressFromEnv()
+	}
+	if address == "" {
+		address = getAddressFromConfig(configPath)
 	}
 
+	log.Println("Address is", address) // 更新了日志消息
 	return &Config{
-		Address: *address,
+		Address: address,
+	}
+}
+
+func main() {
+	configPath := flag.String("configPath", DefaultConfigPath, "Path to the configuration directory")
+	config := LoadConfig(*configPath)
+	log.Println("Config is", config)
+	fmt.Printf("RPC Server Address: %s\n", config.Address)
+
+	// 无限循环以保持程序运行
+	for {
+		// 每10秒打印一次RPC地址
+		fmt.Printf("RPC Server Address: %s\n", config.Address)
+		time.Sleep(10 * time.Second)
 	}
 }

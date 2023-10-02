@@ -5,3 +5,8 @@ service2:
 database:
   host: "localhost"
   port: 5432
+
+# config.yaml
+
+# RPC server address
+address: "127.0.0.1:8080"
